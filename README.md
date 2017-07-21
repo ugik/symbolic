@@ -3,6 +3,7 @@
 Python classes for elemental machine learning.
 
 [Overview](https://docs.google.com/document/d/1tZFdOejfOn5BK4qia0dLrenzvtaZX-jco0ZvEq4UpKY/edit)
+
 [Tutorial](https://docs.google.com/document/d/1EfLcbK8B1r1dlfiQaY8LQL-ottfUApbiSLJuvM8OTWU/edit)
 
 Functions:
