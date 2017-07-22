@@ -1,8 +1,29 @@
+'''
+Copyright (C) 2017 G.Kassabgi <https://github.com/ugik>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''
+
+
 import urllib.request, json 
 import copy
 
+# convenience functions
+
 # determine if a subset is first of its kind in the subsets list
 def subset_first(subset, subsets):
+    # make a copy as clear_offset() alters the object
     subset_clear = copy.deepcopy(subset)
     subset_clear.clear_offset()
     first = True
@@ -16,25 +37,27 @@ def subset_first(subset, subsets):
   
     return first
 
+# find intersection between 2 masks
 def mask_intersection(mask1, mask2, debug=False):
     mask = []
+    # loop through subsets in outer mask
     for outer_position, outer_mask in enumerate(mask1):
+        # loop through subsets in inner mask
         for inner_position, inner_mask in enumerate(mask2):
             if debug: print ('comparing', outer_mask, inner_mask)
             if str(outer_mask) == str(inner_mask):
-                if debug: print ('equal', outer_mask, inner_mask)
                 mask.append(outer_mask)
             elif len(outer_mask) == len(inner_mask):
-                if debug: print (outer_mask.mask(inner_mask, offsets=False))
+                # if subsets are equal length then see if they match in the abstract
                 if outer_mask.mask(inner_mask, offsets=False):
-                    if debug: print ('abstract', outer_mask, len(outer_mask), inner_mask, len(inner_mask), outer_mask.mask(inner_mask, offsets=False))
                     mask.append(outer_mask.mask(inner_mask, offsets=False))
-               
-    # normalist lists
+    
+    # normalize lists
     refactored_mask = []
     for m in mask:
         if type(m) == list:
-            refactored_mask.append(m[0])
+            for m_item in m:
+                refactored_mask.append(m_item)
         elif type(m) == Symbolic:
             refactored_mask.append(m)
 
@@ -47,7 +70,7 @@ def mask_intersection(mask1, mask2, debug=False):
     return dedup_mask
 
 
-# In[67]:
+# In[3]:
 
 # symbolic structure: a list, each element a tuple of symbol (str) and a symbolic structure: [('a', [('foo', None)]
 #
@@ -83,6 +106,7 @@ class Symbolic:
     def subsets(self, offsets=True):
         if offsets:
             self.add_offset()
+            
         # list of subsets
         subsets = []
         for i, s in enumerate(self.symbols):
@@ -92,11 +116,11 @@ class Symbolic:
                     # each subset is a Symbolic structure
                     if not subset.get_symbol(self.OFFSET, partial=True):
                         subsets.append(subset)
-
+            
         # subsets is a list of subsets and their offsets
         return subsets
 
-    # add offset to symbol structure
+    # add offset to symbol structure using OFFSET prefix
     def add_offset(self):
         for i, s in enumerate(self.symbols):
             if (not s[1] or not s[1].get_symbol(self.OFFSET, partial=True)) and self.OFFSET not in s[0]:
@@ -210,6 +234,7 @@ class Symbolic:
         mask = []
         # copy parameter subsets so we can manipulate the list while searching
         symbolic_subsets = symbolic.subsets(offsets=offsets)
+        
         if debug: print('subsets:', symbolic_subsets)
             
         # loop through our subsets
@@ -227,7 +252,7 @@ class Symbolic:
                 if offsets and not subset_first(outer_subset, self.subsets()):
                     first_subset = False
 
-                # compare the str of each subset's Symbolic structure
+                # compare the str of each subset's Symbolic structure to test exact match
                 if str(outer_subset) != str(inner_subset):           
                     
                     # if not same length then no match
@@ -242,9 +267,8 @@ class Symbolic:
                         for i in range(0, len(outer_subset)):
                             symbol = outer_subset.get_symbol('', i)
 
-                            if debug: 
-                                print ('compare:', symbol[0], inner_subset.get_symbol('', i)[0])
-                                
+                            if debug: print ('compare:', symbol[0], inner_subset.get_symbol('', i)[0])
+                            
                             # for each unequal symbol
                             if str(symbol[0]) != str(inner_subset.get_symbol('', i)[0]):
 
@@ -254,7 +278,7 @@ class Symbolic:
                                 
                                 if debug: print ('compare::', symbol[1], inner_subset.get_symbol('', i)[1])
                                 
-                                # recursive call mask( )
+                                # recursive call mask() to check for abstract match of each symbol in structure
                                 symbolics_mask = symbol[1].mask(inner_subset.get_symbol('', i)[1])
 
                                 # do symbolic structures return any matches?
@@ -271,8 +295,6 @@ class Symbolic:
                                     if first_subset or positional:
                                         match_mask.add_symbol(self.WILDCARD)
 
-                                        # TODO need to able to add_symbol() with symbolic structure
-                                        if debug: print ('symbolics', symbolics_mask)
                                         # add symbolics from the match subset list
                                         for symbolics_subset in symbolics_mask:
                                             symbolics_subset.clear_offset()     
@@ -284,9 +306,9 @@ class Symbolic:
                                         if positional:
                                             match_mask.add_symbolic(self.WILDCARD, self.OFFSET +outer_subset.get_offset(symbol[0], position=i))
                                         
-                                        if debug: print ('first subset', first_subset)
                                         if debug: print ('1:', match_mask)
 
+                            # symbols are equal
                             else:
                                 # determine if position is same
                                 positional = outer_subset.get_offset(symbol[0], position=i) and                                    outer_subset.get_offset(symbol[0], position=i) ==                                     inner_subset.get_offset(inner_subset.get_symbol('', i)[0], position=i)
@@ -299,17 +321,12 @@ class Symbolic:
                                     if positional:
                                         match_mask.add_symbolic(symbol[0], self.OFFSET +outer_subset.get_offset(symbol[0], position=i))
 
-                                        if debug: 
-                                            print ('3:', match_mask.symbols)
-                                            print ('first subset', first_subset)
 
                 if match and match_mask:
-                    if debug:
-                        print ('mask:', match_mask.symbols)
+                    if debug: print ('mask:', match_mask.symbols)
                 
                     mask.append(match_mask)
 
-                    
         return mask
 
     # clean representation
@@ -378,9 +395,9 @@ class Symbolic:
         return copy
 
 
-# In[68]:
+# In[178]:
 
-# reason: using patterns for reasoning
+# Reason: using patterns for reasoning
 class Reason:
 
     # representation of placeholder symbol
@@ -399,6 +416,7 @@ class Reason:
     def add_pattern(self, pattern, attribute, relation="is"):
         # generate unique key
         key = str(len(self.patterns))
+        pattern.add_offset()
         self.patterns[key] = {'pattern': pattern, 'attr': attribute, 'rela': relation}
 
     def get_key(self, key):
@@ -406,10 +424,11 @@ class Reason:
             return self.patterns[key]
         
     # get info for a pattern
-    def get_pattern(self, pattern):
+    def get_pattern(self, pattern, debug=False):
         results = []
         for p in self.patterns:
-            if 'pattern' in self.patterns[p] and self.patterns[p]['pattern'] == pattern:
+            if debug: print (p, str(self.patterns[p]['pattern']))
+            if 'pattern' in self.patterns[p] and str(self.patterns[p]['pattern']) == str(pattern):
                 results.append(p)
         return results
         
@@ -421,32 +440,52 @@ class Reason:
                 results.append(p)
         return results
 
-    # reason on the distinguishing symbols for an attribute
-    def distinguishing(self, attribute, relation="is", debug=False):
-        intersect = None
+    # return patterns attributed to an attribute
+    def get_patterns(self, attribute, relation="is", debug=False):
         symbolics = []
         # list patterns that have attribute
-        attr_list = r.get_attr(attribute, relation)
+        attr_list = self.get_attr(attribute, relation)
+        # loop through patterns
+        for p in attr_list:
+            info = self.get_key(p)
+            symbolics.append(info['pattern'])
+
+        return {'attribute': attribute, 'relation': relation, 'patterns' : symbolics}
+                
+    # reason on the distinguishing symbols for an attribute
+    def distinguishing(self, attribute, relation="is", debug=False):
+        symbolics = []
+        # list patterns that have attribute
+        attr_list = self.get_attr(attribute, relation)
         # loop through patterns
         for p in attr_list:
 
-            info = r.get_key(p)
+            info = self.get_key(p)
             # make list of patterns
             symbolics.append(info['pattern'])
 
         mask = []
-        if debug: print ()
         for i,s in enumerate(symbolics[:-1]):
             mask.append(s.mask(symbolics[i+1]))
     
+        if debug: 
+            print ('masks', mask)
+            print ('symbolics', symbolics)
+
         while len(mask) > 1:
             if debug: print ('reduced to', len(mask), 'masks')
             intersection = []
             for i,m in enumerate(mask[:-1]):
+                if debug: 
+                    print ('m', m)
+                    print ('mask', mask[i+1])
                 intersection.append(mask_intersection(m, mask[i+1]))
             mask = intersection
 
-        return mask[0]
+        if mask:
+            return mask[0]
+        else:
+            return None
 
     
     # determine if a pattern is associated with an attribute
@@ -454,7 +493,11 @@ class Reason:
     #        2. attribute distinguishing symbols (the intersection of the attribute patterns' powerset)
     #        3. relative similarity (the avg similarity score across the attribute patterns and anti-patterns)
     #
+    # returns boolean and reason for it
     def determine(self, pattern, attribute, relation="is", debug=False):
+        
+        # make sure pattern has offsets
+        pattern.add_offset()
         
         # establish the anti-relation (eg. 'is' != 'is not')
         ar = None
@@ -469,30 +512,69 @@ class Reason:
         if matching_keys:
             for key in matching_keys:
                 match = self.get_key(key)
+                if debug: print ('key', match)
                 # is there a match in an attribute pattern?
                 if 'attr' in match and 'rela' in match and match['attr'] == attribute and match['rela'] == relation:
                     if debug: print('match', match)
-                    return True
+                    return True, 'exact match with attribute patterns'
                 # is there a match in an attribute anti-pattern?
                 if 'attr' in match and 'rela' in match and match['attr'] == attribute and match['rela'] == ar:
                     if debug: print('anti-match', match)
-                    return False
+                    return False, 'exact match with attribute anti-patterns'
         elif debug: print ('no matching patterns')
 
-        # get the distinguishing symbols for the attribute (the intersection of its powerset)
+        # get the distinguishing symbols for the attribute (the intersection of its powerset) in the relation
         dis_features = self.distinguishing(attribute, relation)
-        # check that every distinguishing feature matches our symbolic structure
-        missing_features = False
-        for feature in dis_features:
-            if not feature.mask(pattern, offsets=False):
-                if debug: print ('missing distinguishing attributes')
-                missing_features = True
-                
-        if not missing_features:
-            if debug: print ('has distinguishing attributes')
-            return True
+        match = False
+    
+        if dis_features:
+            for feature in dis_features:
+                # mark the feature with the pattern
+                mask = feature.mask(pattern, offsets=False)
+    
+                # confirm that every feature is in the mask
+                match = False
+                # check that one of the masks is found in the mask
+                if mask:
+                    for m in mask:
+                        if str(m) == str(feature):
+                            match = True
+                            break
+                    
+                    if not match:
+                        break
+        
+            if match:
+                if debug: print ('has distinguishing features')
+                return True, 'has distinguishing features'
 
-        # if there's no pattern match and no distinguishing symbols then look for relative similarity within class
+        # get the anti-relation distinguishing symbols for the attribute (the intersection of its powerset)
+        if ar:
+            dis_features = self.distinguishing(attribute, ar)
+            if dis_features:
+                match = False
+                for feature in dis_features:
+                    # mark the feature with the pattern
+                    mask = feature.mask(pattern, offsets=False)
+    
+                    # confirm that every feature is in the mask
+                    match = False
+                    # check that one of the masks is found in the mask
+                    if mask:
+                        for m in mask:
+                            if str(m) == str(feature):
+                                match = True
+                                break
+                    
+                    if not match:
+                        break
+        
+            if match:
+                if debug: print ('has distinguishing features for anti-relation')
+                return True, 'has distinguishing features for anti-relation'
+
+            
+        # if there's no pattern match and no distinguishing features then look for relative similarity within class
         if ar:
             perfect_score = pattern.similarity(pattern)
             rela_score = anti_score = 0
@@ -504,7 +586,7 @@ class Reason:
                 similarity = pattern.similarity(rela_pattern)
                 rela_score += similarity
                 rela_count += 1
-                if debug: print (rela_pattern, perfect_score, similarity)
+                if debug: print ('+', rela_pattern, perfect_score, similarity)
    
             # get list of pattern similarity with the anti-relation
             anti_list = self.get_attr(attribute=attribute, relation=ar)
@@ -513,18 +595,21 @@ class Reason:
                 anti_similarity = pattern.similarity(anti_pattern)
                 anti_score += similarity
                 anti_count += 1
-                if debug: print (anti_pattern, perfect_score, anti_similarity)
-               
-            if rela_count == 0 or anti_count == 0: return None
+                if debug: print ('-', anti_pattern, perfect_score, anti_similarity)
+            
+            if rela_count == 0 or anti_count == 0: 
+                return None, "I don't know"
 
-            if debug: print ("rela:", float(rela_score/rela_count), "anti:", float(anti_score/anti_count))
+            if debug: 
+                print ('rela count', rela_count, 'anti count', anti_count)
+                print ("rela score", float(rela_score/rela_count), "anti score", float(anti_score/anti_count))
             # determination favors the highest avg similarity score in the relation/anti-relation patterns
             if float(rela_score/rela_count) > float(anti_score/anti_count):
-                return True
-            else: return False
+                return True, 'has higher similarity with attribute patterns than its anti-patterns'
+            elif float(rela_score/rela_count) < float(anti_score/anti_count): 
+                return False, 'has higher similarity with attribute anti-patterns than its patterns'
         
         # when all else fails None is equivalent to "I don't know"
-        return None
-
+        return None, "I don't know"
 
 

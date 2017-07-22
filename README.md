@@ -10,7 +10,7 @@ Functions:
 
  **add_pattern()** associates a symbolic structure _(a pattern)_ to an attribute _(a thing)_ and a relation _(a type of association)_
  
- **features()** lists symbolic structures for an attribute
+ **get_patterns()** lists symbolic structures for an attribute
  
  **determine()** determines if a symbolic structure belongs to an attribute
  
