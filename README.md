@@ -2,9 +2,9 @@
 
 Python classes for elemental machine learning.
 
-[Overview](https://docs.google.com/document/d/1tZFdOejfOn5BK4qia0dLrenzvtaZX-jco0ZvEq4UpKY/edit)
+[Overview](https://medium.com/@gk_/a-basic-model-for-machine-learning-an-overview-3854ea77e919)
 
-[Tutorial](https://docs.google.com/document/d/1EfLcbK8B1r1dlfiQaY8LQL-ottfUApbiSLJuvM8OTWU/edit)
+[Tutorial](https://medium.com/@gk_/a-basic-model-for-machine-learning-an-implementation-3ee7c49eb334)
 
 Functions:
 
