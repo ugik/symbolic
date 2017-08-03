@@ -235,18 +235,16 @@ class Symbolic:
         # copy parameter subsets so we can manipulate the list while searching
         symbolic_subsets = symbolic.subsets(offsets=offsets)
         
-        if debug: print('subsets:', symbolic_subsets)
-            
         # loop through our subsets
         for outer_position, outer_subset in enumerate(self.subsets(offsets=offsets)):
             for inner_position, inner_subset in enumerate(symbolic_subsets):
 
+                if debug: 
+                    print ('0:', outer_position, outer_subset, inner_position, inner_subset)
+                
                 match = True
                 match_mask = outer_subset
-
-                if debug: 
-                    print ('0:', outer_position, outer_subset, inner_position, inner_subset, symbolic_subsets)
-
+                    
                 first_subset = True
                 # note if this is the first subset of its kind in the subset list
                 if offsets and not subset_first(outer_subset, self.subsets()):
@@ -265,21 +263,29 @@ class Symbolic:
                         
                         # loop through each symbol
                         for i in range(0, len(outer_subset)):
-                            symbol = outer_subset.get_symbol('', i)
+                            outer_symbol = outer_subset.get_symbol('', i)
+                            inner_symbol = inner_subset.get_symbol('', i)
 
-                            if debug: print ('compare:', symbol[0], inner_subset.get_symbol('', i)[0])
-                            
+                            # correct for (symbol, None) 
+                            if type(outer_symbol[0]) == tuple:
+                                outer_symbol = outer_subset.get_symbol('', i)[0]
+                            if type(inner_symbol[0]) == tuple:
+                                inner_symbol = inner_subset.get_symbol('', i)[0]
+
+                            if debug: print ('compare:', outer_symbol[0], inner_symbol[0])
+                                
                             # for each unequal symbol
-                            if str(symbol[0]) != str(inner_subset.get_symbol('', i)[0]):
+                            if str(outer_symbol[0]) != str(inner_symbol[0]) or \
+                               str(outer_symbol[0]) == self.WILDCARD or str(inner_symbol[0]) == self.WILDCARD:
 
                                 # are their respective symbolic structures empty?
-                                if not symbol[1] or not inner_subset.get_symbol('', i)[1]:
+                                if not outer_symbol[1] or not inner_symbol[1]:
                                     match = False; break
-                                
-                                if debug: print ('compare::', symbol[1], inner_subset.get_symbol('', i)[1])
-                                
+
                                 # recursive call mask() to check for abstract match of each symbol in structure
-                                symbolics_mask = symbol[1].mask(inner_subset.get_symbol('', i)[1])
+                                symbolics_mask = outer_symbol[1].mask(inner_symbol[1])
+
+                                if debug: print ('compare::', outer_symbol[1], inner_symbol[1], outer_symbol[1].mask(inner_symbol[1]))
 
                                 # do symbolic structures return any matches?
                                 if not symbolics_mask:
@@ -288,7 +294,7 @@ class Symbolic:
                                 # use mask if there's a match
                                 if match:
                                     # determine if position is same
-                                    positional = outer_subset.get_offset(symbol[0], position=i) == inner_subset.get_offset(inner_subset.get_symbol('', i)[0], position=i)
+                                    positional = outer_subset.get_offset(outer_symbol[0], position=i) == inner_subset.get_offset(inner_symbol[0], position=i)
                                     
                                     # symbols match
                                     # add only if this is the first of this symbol in the pattern or this is positional match
@@ -304,31 +310,32 @@ class Symbolic:
                                     
                                         # add offset if offset match
                                         if positional:
-                                            match_mask.add_symbolic(self.WILDCARD, self.OFFSET +outer_subset.get_offset(symbol[0], position=i))
+                                            if outer_subset.get_offset(outer_symbol[0], position=i):
+                                                match_mask.add_symbolic(self.WILDCARD, self.OFFSET +outer_subset.get_offset(outer_symbol[0], position=i))
                                         
                                         if debug: print ('1:', match_mask)
 
                             # symbols are equal
                             else:
                                 # determine if position is same
-                                positional = outer_subset.get_offset(symbol[0], position=i) and                                    outer_subset.get_offset(symbol[0], position=i) ==                                     inner_subset.get_offset(inner_subset.get_symbol('', i)[0], position=i)
-
+                                positional = outer_subset.get_offset(outer_symbol[0], position=i) and \
+                                   outer_subset.get_offset(outer_symbol[0], position=i) == \
+                                    inner_subset.get_offset(inner_symbol[0], position=i)
+                                
                                 # symbols match
                                 # add only if this is the first of this symbol in the pattern or this is positional match
                                 if first_subset or positional:
-                                    match_mask.add_symbol(symbol[0])
+                                    match_mask.add_symbol(outer_symbol[0])
                                     if debug: print ('2:', match_mask.symbols)
                                     if positional:
-                                        match_mask.add_symbolic(symbol[0], self.OFFSET +outer_subset.get_offset(symbol[0], position=i))
+                                        match_mask.add_symbolic(outer_symbol[0], self.OFFSET +outer_subset.get_offset(outer_symbol[0], position=i))
 
 
                 if match and match_mask:
                     if debug: print ('mask:', match_mask.symbols)
-                
                     mask.append(match_mask)
 
         return mask
-
     # clean representation
     def clean(self):
         r_value = []
@@ -593,7 +600,7 @@ class Reason:
             for anti_pattern_key in anti_list:
                 anti_pattern = self.get_key(anti_pattern_key)['pattern']
                 anti_similarity = pattern.similarity(anti_pattern)
-                anti_score += similarity
+                anti_score += anti_similarity
                 anti_count += 1
                 if debug: print ('-', anti_pattern, perfect_score, anti_similarity)
             
