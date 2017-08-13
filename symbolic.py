@@ -1,3 +1,17 @@
+'''
+Copyright (C) 2017 G.Kassabgi <https://github.com/ugik>
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''
+
 import urllib.request, json 
 import copy
 import time
@@ -100,7 +114,6 @@ def top_mask(masks):
     return max_mask 
 
 
-# In[57]:
 
 # symbolic structure: a list, each element a tuple of symbol (str) and a symbolic structure: [('a', [('foo', None)]
 #
@@ -443,7 +456,6 @@ class Symbolic:
         return copy
 
 
-# In[82]:
 
 # Reason: using patterns for reasoning
 class Reason:
